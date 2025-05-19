@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Estilos básicos */
+body {
+  min-height: 100vh;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
