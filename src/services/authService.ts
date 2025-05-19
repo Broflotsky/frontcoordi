@@ -47,9 +47,11 @@ class AuthService {
         const roleId = decoded.role_id;
         const roleName = ROLE_MAPPING[roleId] || "user";
         const userId = decoded.id;
+        const userEmail = decoded.email;
 
         this.setUserRole(roleName);
         this.setUserId(userId);
+        this.setUserData(userEmail);
 
       } catch (decodeError) {
         console.error("Error decodificando token:", decodeError);
@@ -68,6 +70,28 @@ class AuthService {
         "/api/v1/auth/register",
         userData
       );
+      const token = response.data.token;
+      this.setToken(token);
+
+      try {
+        const decoded = jwtDecode<DecodedToken>(token);
+
+        const roleId = decoded.role_id;
+        const roleName = ROLE_MAPPING[roleId] || "user";
+        const userId = decoded.id;
+        const userEmail = decoded.email;
+        const userFirstName = userData.first_name;
+        const userLastName = userData.last_name;
+
+        this.setUserRole(roleName);
+        this.setUserId(userId);
+        this.setUserData(userEmail, userFirstName, userLastName);
+
+      } catch (decodeError) {
+        console.error("Error decodificando token:", decodeError);
+        this.setUserRole("user");
+      }
+
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -77,6 +101,10 @@ class AuthService {
   logout(): void {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userFirstName");
+    localStorage.removeItem("userLastName");
   }
 
   setToken(token: string): void {
@@ -102,6 +130,24 @@ class AuthService {
   getUserId(): number | null {
     const id = localStorage.getItem("userId");
     return id ? parseInt(id, 10) : null;
+  }
+
+  setUserData(email: string, firstName?: string, lastName?: string): void {
+    localStorage.setItem("userEmail", email);
+    if (firstName) localStorage.setItem("userFirstName", firstName);
+    if (lastName) localStorage.setItem("userLastName", lastName);
+  }
+  
+  getUserEmail(): string | null {
+    return localStorage.getItem("userEmail");
+  }
+  
+  getUserFirstName(): string | null {
+    return localStorage.getItem("userFirstName");
+  }
+  
+  getUserLastName(): string | null {
+    return localStorage.getItem("userLastName");
   }
 
   isAuthenticated(): boolean {

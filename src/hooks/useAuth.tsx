@@ -20,6 +20,9 @@ export const useAuth = () => {
     const token = authService.getToken();
     const userRole = authService.getUserRole();
     const userId = authService.getUserId();
+    const userEmail = authService.getUserEmail();
+    const userFirstName = authService.getUserFirstName();
+    const userLastName = authService.getUserLastName();
     
     if (token) {
       setIsAuthenticated(true);
@@ -27,8 +30,10 @@ export const useAuth = () => {
       
       setUser({
         id: userId || 0,
-        email: '',
-        role: userRole || 'user'
+        email: userEmail || '',
+        role: userRole || 'user',
+        first_name: userFirstName || '',
+        last_name: userLastName || ''
       });
     }
   }, []);
@@ -42,10 +47,14 @@ export const useAuth = () => {
       setRole(userRole);
       
       const userId = authService.getUserId();
+      
+      // Actualizar el estado del usuario con toda la información disponible
       setUser({
         id: userId || 0,
         email: email,
-        role: userRole
+        role: userRole,
+        first_name: authService.getUserFirstName() || '',
+        last_name: authService.getUserLastName() || ''
       });
       
       if (userRole === 'admin') {
