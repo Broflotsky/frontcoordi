@@ -31,7 +31,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <span className="hidden md:inline">Bienvenido, {user?.name}</span>
+                <span className="hidden md:inline">Bienvenido</span>
                 <button 
                   onClick={handleLogout}
                   className="bg-white text-blue-600 px-3 py-1 rounded hover:bg-blue-100 transition-colors"

@@ -11,18 +11,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredRole 
 }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Redirect to login if not authenticated
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check for required role if specified
-  if (requiredRole && user?.role !== requiredRole) {
-    // Redirect to home page if user doesn't have required role
-    return <Navigate to="/" replace />;
+  if (requiredRole && role !== requiredRole) {
+    const redirectPath = role === 'admin' ? '/admin' : '/shipments/new';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;
