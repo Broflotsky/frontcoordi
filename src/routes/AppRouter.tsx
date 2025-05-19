@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import PublicRoute from '../components/PublicRoute';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import CreateShipment from '../pages/CreateShipment';
@@ -17,9 +18,9 @@ const AppRouter: React.FC = () => {
           {/* Ruta principal - Redirige a la página de login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           
-          {/* Rutas públicas */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* Rutas públicas - solo accesibles sin autenticación */}
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           
           {/* Rutas protegidas */}
           <Route 
