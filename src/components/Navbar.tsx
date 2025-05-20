@@ -61,6 +61,9 @@ const Navbar: React.FC = () => {
                 <Link to="/shipments/new" className="hover:text-blue-200">
                   Crear Envío
                 </Link>
+                <Link to="/shipments/status" className="hover:text-blue-200">
+                  Seguimiento de Envíos
+                </Link>
                 {currentUser && currentUser.role === "admin" && (
                   <Link to="/admin" className="hover:text-blue-200">
                     Panel Admin
