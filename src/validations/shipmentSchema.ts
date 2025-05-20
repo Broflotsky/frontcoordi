@@ -6,7 +6,12 @@ export const shipmentSchema = z.object({
   destination_detail: z.string().optional(),
   product_type_id: z.number().int().positive('Seleccione un tipo de producto'),
   weight_grams: z.number().int().positive('El peso debe ser mayor a 0'),
-  dimensions: z.string().min(1, 'Ingrese las dimensiones del paquete'),
+  // Campos individuales de dimensiones
+  width_cm: z.number().int().min(1, 'El ancho debe ser mayor a 0'),
+  height_cm: z.number().int().min(1, 'El alto debe ser mayor a 0'),
+  length_cm: z.number().int().min(1, 'El largo debe ser mayor a 0'),
+  // Campo calculado para almacenar las dimensiones combinadas
+  dimensions: z.string().optional(),
   recipient_name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   recipient_address: z.string().min(3, 'Ingrese una dirección válida'),
   recipient_phone: z.union([
@@ -29,7 +34,12 @@ export type ShipmentFormValues = {
   destination_detail?: string;
   product_type_id: number;
   weight_grams: number;
-  dimensions: string;
+  // Campos individuales de dimensiones
+  width_cm: number;
+  height_cm: number;
+  length_cm: number;
+  // Campo calculado que combinará los 3 valores
+  dimensions?: string;
   recipient_name: string;
   recipient_address: string;
   recipient_phone: string | number;
@@ -40,12 +50,15 @@ export type ShipmentFormValues = {
 export interface Location {
   id: number;
   name: string;
+  department: string;
 }
 
 export interface ProductType {
   id: number;
   name: string;
   description?: string;
+  min_weight_grams: number;
+  max_weight_grams: number | null;
 }
 
 // Tipos para respuesta del backend

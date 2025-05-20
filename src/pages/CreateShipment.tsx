@@ -8,24 +8,22 @@ import type {
   ProductType,
 } from "../validations/shipmentSchema";
 import shipmentService from "../services/shipmentService";
+import FormField from "../components/ui/FormField";
+import SelectField from "../components/ui/SelectField";
+import DimensionsField from "../components/ui/DimensionsField";
+import FormSection from "../components/shipment/FormSection";
+import ShipmentCreatedSuccess from "../components/shipment/ShipmentCreatedSuccess";
 
 const CreateShipment: React.FC = () => {
-  // Estados para manejar los datos de los selects
   const [locations, setLocations] = useState<Location[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [shipmentCreated, setShipmentCreated] = useState(false);
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
 
-  // Configuración de react-hook-form con zod
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-  } = useForm<ShipmentFormValues>({
+  const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentSchema),
     mode: "onChange",
     defaultValues: {
@@ -34,7 +32,9 @@ const CreateShipment: React.FC = () => {
       destination_detail: "",
       product_type_id: 0,
       weight_grams: 0,
-      dimensions: "",
+      width_cm: 0,
+      height_cm: 0,
+      length_cm: 0,
       recipient_name: "",
       recipient_address: "",
       recipient_phone: "",
@@ -42,7 +42,16 @@ const CreateShipment: React.FC = () => {
     },
   });
 
-  const originId = watch("origin_id");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+    setValue,
+  } = form;
+
+  const weightGrams = watch("weight_grams");
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -63,11 +72,29 @@ const CreateShipment: React.FC = () => {
     fetchInitialData();
   }, []);
 
+  useEffect(() => {
+    if (productTypes.length > 0 && weightGrams > 0) {
+      const selectedProductType = productTypes.find((type) => {
+        const isAboveMin = type.min_weight_grams <= weightGrams;
+        const isBelowMax =
+          type.max_weight_grams === null ||
+          weightGrams <= type.max_weight_grams;
+        return isAboveMin && isBelowMax;
+      });
+
+      if (selectedProductType) {
+        setValue("product_type_id", selectedProductType.id);
+      }
+    }
+  }, [weightGrams, productTypes, setValue]);
+
   const onSubmit = async (data: ShipmentFormValues) => {
     setApiError(null);
     setLoading(true);
 
     try {
+      const combinedDimensions = `${data.width_cm}x${data.height_cm}x${data.length_cm}`;
+
       const formattedData = {
         ...data,
         origin_id: Number(data.origin_id),
@@ -76,6 +103,7 @@ const CreateShipment: React.FC = () => {
         weight_grams: Number(data.weight_grams),
         recipient_phone: data.recipient_phone.toString(),
         recipient_document: data.recipient_document.toString(),
+        dimensions: combinedDimensions,
       };
 
       const result = await shipmentService.createShipment(formattedData);
@@ -85,66 +113,29 @@ const CreateShipment: React.FC = () => {
         setTrackingCode(result.data.tracking_code);
         reset();
       } else {
-        setApiError(result.error);
+        setApiError(result.error || "Error al crear el envío");
       }
     } catch (error) {
       setApiError("Ocurrió un error inesperado. Intente nuevamente.");
-      console.error(error);
+      console.error("Error al crear envío:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para crear un nuevo envío después de haber creado uno exitosamente
   const handleCreateNew = () => {
     setShipmentCreated(false);
     setTrackingCode(null);
     reset();
+    setApiError(null);
   };
 
-  // Si ya se creó el envío, mostrar mensaje de éxito
   if (shipmentCreated && trackingCode) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="bg-white shadow-md rounded-lg p-8 max-w-2xl mx-auto">
-          <div className="text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-green-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <h2 className="mt-4 text-2xl font-bold text-gray-800">
-              ¡Envío creado con éxito!
-            </h2>
-            <p className="mt-2 text-gray-600">
-              El código de seguimiento de su envío es:
-            </p>
-            <p className="mt-2 text-xl font-bold text-blue-600 bg-gray-100 py-2 px-4 mx-auto inline-block rounded">
-              {trackingCode}
-            </p>
-            <p className="mt-4 text-sm text-gray-500">
-              Guarde este código para realizar el seguimiento de su envío.
-            </p>
-            <div className="mt-6">
-              <button
-                onClick={handleCreateNew}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Crear Nuevo Envío
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ShipmentCreatedSuccess
+        trackingCode={trackingCode}
+        onCreateNew={handleCreateNew}
+      />
     );
   }
 
@@ -153,7 +144,10 @@ const CreateShipment: React.FC = () => {
       <h1 className="text-2xl font-bold mb-6">Crear Nuevo Envío</h1>
       <div className="bg-white shadow-md rounded-lg p-6">
         {apiError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div
+            className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded"
+            role="alert"
+          >
             {apiError}
           </div>
         )}
@@ -164,357 +158,139 @@ const CreateShipment: React.FC = () => {
           noValidate
         >
           <fieldset disabled={loading} className="space-y-4">
-            {/* Sección: Origen y Destino */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="origin_id"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Ciudad de Origen
-                </label>
-                <select
-                  id="origin_id"
-                  aria-invalid={!!errors.origin_id}
-                  aria-describedby="origin_id-error"
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.origin_id ? "border-red-500" : "border-gray-300"
-                  }`}
-                  {...register("origin_id", {
-                    setValueAs: (value) => parseInt(value, 10) || 0,
-                  })}
-                >
-                  <option value="0">Seleccione Ciudad</option>
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.origin_id && (
-                  <p id="origin_id-error" className="mt-1 text-sm text-red-600">
-                    {errors.origin_id.message}
-                  </p>
-                )}
-              </div>
+            <FormSection title="Información del Envío">
+              <SelectField
+                id="origin_id"
+                label="Ciudad de Origen"
+                options={locations}
+                error={errors.origin_id}
+                required
+                {...register("origin_id", {
+                  setValueAs: (value) => parseInt(value, 10) || 0,
+                })}
+              />
 
-              <div>
-                <label
-                  htmlFor="destination_id"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Ciudad de Destino
-                </label>
-                <select
-                  id="destination_id"
-                  aria-invalid={!!errors.destination_id}
-                  aria-describedby="destination_id-error"
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.destination_id ? "border-red-500" : "border-gray-300"
-                  }`}
-                  {...register("destination_id", {
-                    setValueAs: (value) => parseInt(value, 10) || 0,
-                  })}
-                >
-                  <option value="0">Seleccione Ciudad</option>
-                  {locations.map((location) => (
-                    <option
-                      key={location.id}
-                      value={location.id}
-                      disabled={location.id === Number(originId)}
-                    >
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.destination_id && (
-                  <p
-                    id="destination_id-error"
-                    className="mt-1 text-sm text-red-600"
-                  >
-                    {errors.destination_id.message}
-                  </p>
-                )}
-              </div>
+              <SelectField
+                id="destination_id"
+                label="Ciudad de Destino"
+                options={locations}
+                error={errors.destination_id}
+                required
+                {...register("destination_id", {
+                  setValueAs: (value) => parseInt(value, 10) || 0,
+                })}
+              />
 
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="destination_detail"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Detalles del Destino (Opcional)
-                </label>
-                <textarea
-                  id="destination_detail"
-                  aria-invalid={!!errors.destination_detail}
-                  aria-describedby="destination_detail-error"
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.destination_detail
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  }`}
-                  rows={2}
-                  {...register("destination_detail")}
-                ></textarea>
-                {errors.destination_detail && (
-                  <p
-                    id="destination_detail-error"
-                    className="mt-1 text-sm text-red-600"
-                  >
-                    {errors.destination_detail.message}
-                  </p>
-                )}
-              </div>
-            </div>
+              <FormField
+                id="destination_detail"
+                label="Detalles del Destino"
+                placeholder="Ej: Zona norte, cerca al parque"
+                error={errors.destination_detail}
+                {...register("destination_detail")}
+              />
+            </FormSection>
 
-            {/* Sección: Información del Paquete */}
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">
-                Información del Paquete
-              </h3>
+            <FormSection title="Información del Producto">
+              <FormField
+                id="weight_grams"
+                label="Peso (gramos)"
+                type="number"
+                min="1"
+                error={errors.weight_grams}
+                required
+                {...register("weight_grams", {
+                  setValueAs: (value) => parseInt(value, 10) || 0,
+                })}
+              />
+              <SelectField
+                id="product_type_id"
+                label="Tipo de Producto (asignado automáticamente)"
+                options={productTypes}
+                error={errors.product_type_id}
+                required
+                disabled={true}
+                {...register("product_type_id", {
+                  setValueAs: (value) => parseInt(value, 10) || 0,
+                })}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="product_type_id"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Tipo de Producto
-                  </label>
-                  <select
-                    id="product_type_id"
-                    aria-invalid={!!errors.product_type_id}
-                    aria-describedby="product_type_id-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.product_type_id
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    {...register("product_type_id", {
-                      setValueAs: (value) => parseInt(value, 10) || 0,
-                    })}
-                  >
-                    <option value="0">Seleccione Tipo</option>
-                    {productTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.product_type_id && (
-                    <p
-                      id="product_type_id-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.product_type_id.message}
-                    </p>
-                  )}
-                </div>
+              <DimensionsField
+                register={register}
+                watch={watch}
+                errors={errors}
+              />
+            </FormSection>
 
-                <div>
-                  <label
-                    htmlFor="weight_grams"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Peso (gramos)
-                  </label>
-                  <input
-                    id="weight_grams"
-                    type="number"
-                    min="1"
-                    aria-invalid={!!errors.weight_grams}
-                    aria-describedby="weight_grams-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.weight_grams ? "border-red-500" : "border-gray-300"
-                    }`}
-                    {...register("weight_grams", {
-                      setValueAs: (value) => parseInt(value, 10) || 0,
-                    })}
-                  />
-                  {errors.weight_grams && (
-                    <p
-                      id="weight_grams-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.weight_grams.message}
-                    </p>
-                  )}
-                </div>
+            <FormSection title="Información del Destinatario">
+              <FormField
+                id="recipient_name"
+                label="Nombre del Destinatario"
+                error={errors.recipient_name}
+                required
+                {...register("recipient_name")}
+              />
 
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="dimensions"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Dimensiones (ej: 30cm x 20cm x 15cm)
-                  </label>
-                  <input
-                    id="dimensions"
-                    type="text"
-                    aria-invalid={!!errors.dimensions}
-                    aria-describedby="dimensions-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.dimensions ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder="Ancho x Alto x Largo"
-                    {...register("dimensions")}
-                  />
-                  {errors.dimensions && (
-                    <p
-                      id="dimensions-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.dimensions.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+              <FormField
+                id="recipient_document"
+                label="Documento del Destinatario"
+                error={errors.recipient_document}
+                required
+                {...register("recipient_document")}
+              />
 
-            {/* Sección: Destinatario */}
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800 mb-4">
-                Información del Destinatario
-              </h3>
+              <FormField
+                id="recipient_phone"
+                label="Teléfono del Destinatario"
+                type="tel"
+                error={errors.recipient_phone}
+                required
+                {...register("recipient_phone")}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="recipient_name"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Nombre Completo
-                  </label>
-                  <input
-                    id="recipient_name"
-                    type="text"
-                    aria-invalid={!!errors.recipient_name}
-                    aria-describedby="recipient_name-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.recipient_name
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    {...register("recipient_name")}
-                  />
-                  {errors.recipient_name && (
-                    <p
-                      id="recipient_name-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.recipient_name.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="recipient_document"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Documento de Identidad
-                  </label>
-                  <input
-                    id="recipient_document"
-                    type="number"
-                    aria-invalid={!!errors.recipient_document}
-                    aria-describedby="recipient_document-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.recipient_document
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    {...register("recipient_document", {
-                      valueAsNumber: true,
-                      setValueAs: (value) =>
-                        value === "" ? "" : value.toString(),
-                    })}
-                  />
-                  {errors.recipient_document && (
-                    <p
-                      id="recipient_document-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.recipient_document.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="recipient_phone"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Teléfono
-                  </label>
-                  <input
-                    id="recipient_phone"
-                    type="number"
-                    inputMode="numeric"
-                    aria-invalid={!!errors.recipient_phone}
-                    aria-describedby="recipient_phone-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.recipient_phone
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    {...register("recipient_phone", {
-                      valueAsNumber: true,
-                      setValueAs: (value) =>
-                        value === "" ? "" : value.toString(),
-                    })}
-                  />
-                  {errors.recipient_phone && (
-                    <p
-                      id="recipient_phone-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.recipient_phone.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="recipient_address"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Dirección Completa
-                  </label>
-                  <input
-                    id="recipient_address"
-                    type="text"
-                    aria-invalid={!!errors.recipient_address}
-                    aria-describedby="recipient_address-error"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.recipient_address
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    {...register("recipient_address")}
-                  />
-                  {errors.recipient_address && (
-                    <p
-                      id="recipient_address-error"
-                      className="mt-1 text-sm text-red-600"
-                    >
-                      {errors.recipient_address.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+              <FormField
+                id="recipient_address"
+                label="Dirección del Destinatario"
+                error={errors.recipient_address}
+                required
+                {...register("recipient_address")}
+              />
+            </FormSection>
 
             <div className="flex justify-end pt-4">
               <button
                 type="submit"
+                disabled={loading}
+                aria-busy={loading}
                 className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
                   loading
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center min-w-[150px]`}
               >
-                {loading ? "Creando Envío..." : "Crear Envío"}
+                {loading && (
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {loading ? "Creando envío..." : "Crear envío"}
               </button>
             </div>
           </fieldset>

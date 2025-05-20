@@ -18,25 +18,56 @@ interface SuccessResponse {
 
 class ShipmentService {
   async getLocations(): Promise<Location[]> {
-    try {
-      // Usamos la API general para obtener ciudades/ubicaciones
-      const response = await api.get('/api/v1/locations');
-      return response.data;
-    } catch (error) {
-      console.error('Error al obtener ubicaciones:', error);
-      return [];
-    }
+    // Datos mockeados para pruebas y desarrollo
+    return [
+      { id: 1, name: 'Bogotá', department: 'Cundinamarca' },
+      { id: 2, name: 'Medellín', department: 'Antioquia' },
+      { id: 3, name: 'Cali', department: 'Valle del Cauca' },
+      { id: 4, name: 'Barranquilla', department: 'Atlántico' },
+      { id: 5, name: 'Cartagena', department: 'Bolívar' },
+      { id: 6, name: 'Cúcuta', department: 'Norte de Santander' },
+      { id: 7, name: 'Bucaramanga', department: 'Santander' },
+      { id: 8, name: 'Pereira', department: 'Risaralda' },
+      { id: 9, name: 'Santa Marta', department: 'Magdalena' },
+      { id: 10, name: 'Ibagué', department: 'Tolima' },
+      { id: 11, name: 'Pasto', department: 'Nariño' },
+      { id: 12, name: 'Manizales', department: 'Caldas' },
+      { id: 13, name: 'Neiva', department: 'Huila' },
+      { id: 14, name: 'Villavicencio', department: 'Meta' },
+      { id: 15, name: 'Armenia', department: 'Quindío' },
+      { id: 16, name: 'Valledupar', department: 'Cesar' },
+      { id: 17, name: 'Montería', department: 'Córdoba' },
+      { id: 18, name: 'Popayán', department: 'Cauca' },
+      { id: 19, name: 'Sincelejo', department: 'Sucre' },
+      { id: 20, name: 'Tunja', department: 'Boyacá' }
+    ];
   }
 
   async getProductTypes(): Promise<ProductType[]> {
-    try {
-      // Usamos la API general para obtener tipos de productos
-      const response = await api.get('/api/v1/product-types');
-      return response.data;
-    } catch (error) {
-      console.error('Error al obtener tipos de producto:', error);
-      return [];
-    }
+    // Datos mockeados para pruebas y desarrollo
+    return [
+      {
+        id: 1,
+        name: 'sobre',
+        min_weight_grams: 0,
+        max_weight_grams: 1000,
+        description: 'Documentos y sobres pequeños de 0 a 1000 gramos'
+      },
+      {
+        id: 2,
+        name: 'paquete',
+        min_weight_grams: 1001,
+        max_weight_grams: 20000,
+        description: 'Paquetes estándar de 1001 a 20000 gramos'
+      },
+      {
+        id: 3,
+        name: 'paquete pesado',
+        min_weight_grams: 20001,
+        max_weight_grams: null,
+        description: 'Paquetes grandes o pesados de 20001 gramos en adelante'
+      }
+    ];
   }
 
   async createShipment(data: ShipmentFormValues): Promise<SuccessResponse | ErrorResponse> {
