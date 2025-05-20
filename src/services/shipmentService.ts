@@ -1,13 +1,11 @@
 import api from './api';
 import type { Location, ProductType, ShipmentFormValues, ShipmentResponse } from '../validations/shipmentSchema';
 
-// Interfaz para la respuesta con errores
 interface ErrorResponse {
   success: false;
   error: string;
 }
 
-// Interfaz para respuesta exitosa
 interface SuccessResponse {
   success: true;
   data: {
@@ -18,7 +16,6 @@ interface SuccessResponse {
 
 class ShipmentService {
   async getLocations(): Promise<Location[]> {
-    // Datos mockeados para pruebas y desarrollo
     return [
       { id: 1, name: 'Bogotá', department: 'Cundinamarca' },
       { id: 2, name: 'Medellín', department: 'Antioquia' },
