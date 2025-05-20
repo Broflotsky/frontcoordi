@@ -4,6 +4,7 @@ import PublicRoute from '../components/PublicRoute';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import CreateShipment from '../pages/CreateShipment';
+// @ts-expect-error - Solución temporal para el problema de verbatimModuleSyntax
 import ShipmentStatus from '../pages/ShipmentStatus';
 import AdminPanel from '../pages/AdminPanel';
 import ProtectedRoute from '../components/ProtectedRoute';
@@ -32,7 +33,7 @@ const AppRouter: React.FC = () => {
             } 
           />
           <Route 
-            path="/shipments/:id/status" 
+            path="/shipments/status" 
             element={
               <ProtectedRoute>
                 <ShipmentStatus />

@@ -1,5 +1,10 @@
 import api from './api';
 import type { Location, ProductType, ShipmentFormValues, ShipmentResponse } from '../validations/shipmentSchema';
+import type { 
+  ShipmentStatus, 
+  ShipmentStatusResponse, 
+  StatusHistoryItem
+} from '../validations/trackingSchema';
 
 interface ErrorResponse {
   success: false;
@@ -103,17 +108,69 @@ class ShipmentService {
     }
   }
 
-  async getShipmentStatus(trackingCode: string): Promise<{success: boolean, data?: Record<string, unknown>, error?: string}> {
+  async getShipmentStatusByTrackingCode(trackingCode: string): Promise<ShipmentStatusResponse> {
     try {
-      const response = await api.get(`/api/v1/shipments/tracking/${trackingCode}/status`);
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch {
+      // Realizamos una sola llamada para obtener el historial (que incluye toda la info necesaria)
+      const response = await api.get(`/api/v1/shipments/tracking/${trackingCode}/history`);
+      
+      console.log('History Response:', response.data);
+      
+      // Verificamos si la respuesta fue exitosa
+      if (response.data.status === 'success' && response.data.data) {
+        console.log('Data:', response.data.data);
+        // Procesamos la información del historial
+        const { shipment, status_history } = response.data.data;
+        
+        // Ordenamos el historial por fecha (más reciente primero)
+        const sortedHistory = [...status_history].sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        
+        // El estado actual es el más reciente (primer elemento del historial ordenado)
+        const currentStatus = sortedHistory.length > 0 ? {
+          id: sortedHistory[0].id,
+          status: sortedHistory[0].status,
+          comment: sortedHistory[0].comment,
+          timestamp: sortedHistory[0].timestamp,
+          user_name: sortedHistory[0].user_name
+        } : null;
+        
+        // Transformamos el historial al formato esperado
+        const historyItems: StatusHistoryItem[] = sortedHistory.map(item => ({
+          id: item.id,
+          status: item.status,
+          comment: item.comment,
+          timestamp: item.timestamp,
+          user_name: item.user_name
+        }));
+        
+        // Creamos el objeto de respuesta
+        const formattedShipment: ShipmentStatus = {
+          id: shipment.id,
+          tracking_code: shipment.tracking_code,
+          origin_id: shipment.origin_id,
+          destination_id: shipment.destination_id,
+          created_at: shipment.created_at,
+          current_status: currentStatus,
+          history: historyItems
+        };
+        
+        return {
+          success: true,
+          data: formattedShipment
+        };
+      } 
+      
       return {
         success: false,
-        error: 'Error al obtener el estado del envío'
+        error: response.data.error || 'Error al obtener los datos del envío'
+      };
+    } catch (error) {
+      console.error('Error al consultar estado:', error);
+      
+      return {
+        success: false,
+        error: 'Error al consultar el estado del envío'
       };
     }
   }
