@@ -1,15 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const trackingSchema = z.object({
-  trackingCode: z.string()
-    .min(4, 'El código debe tener al menos 4 caracteres')
+  trackingCode: z
+    .string()
+    .min(4, "El código debe tener al menos 4 caracteres")
     .trim()
-    .nonempty('El código de seguimiento es requerido'),
+    .nonempty("El código de seguimiento es requerido"),
 });
 
 export type TrackingFormValues = z.infer<typeof trackingSchema>;
 
-// Tipos para las respuestas de la API basados en la estructura real
 export interface ApiShipmentData {
   id: number;
   tracking_code: string;
@@ -36,7 +36,6 @@ export interface ApiResponse {
   };
 }
 
-// Interfaces que usamos en el componente
 export interface ShipmentStatus {
   id: number;
   tracking_code: string;

@@ -42,7 +42,6 @@ const ShipmentStatus: React.FC = () => {
     }
   };
   
-  // Función auxiliar para formatear fechas con manejo de valores inválidos
   const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return 'Fecha no disponible';
     
@@ -63,7 +62,6 @@ const ShipmentStatus: React.FC = () => {
     }
   };
   
-  // Función para determinar el color del estado
   const getStatusColor = (status: string | undefined | null) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     
@@ -82,7 +80,6 @@ const ShipmentStatus: React.FC = () => {
     }
   };
   
-  // Función para determinar el color de la bolita en la línea de tiempo
   const getStatusBulletColor = (status: string | undefined | null) => {
     if (!status) return 'bg-gray-300';
     
